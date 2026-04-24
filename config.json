@@ -1,0 +1,9 @@
+{
+  "integrations": {
+    "claude": {
+      "models": [
+        "minimax-m2.7:cloud"
+      ]
+    }
+  }
+}

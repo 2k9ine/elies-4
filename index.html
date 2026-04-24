@@ -645,11 +645,11 @@
     // ============================================
     // SUPABASE CLIENT
     // ============================================
-    let supabase = null;
+    let supabaseClient = null;
     let currentUser = null;
 
     function initSupabase() {
-      supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+      supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
     }
 
     // ============================================
@@ -724,7 +724,7 @@
         showLoading();
         if (isSignUpMode) {
           // Sign up
-          const { data, error } = await supabase.auth.signUp({
+          const { data, error } = await supabaseClient.auth.signUp({
             email,
             password,
             options: { data: { full_name: name } },
@@ -740,7 +740,7 @@
         } else {
           // Sign in
           console.log('Attempting sign in with:', email);
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
           console.log('Sign in result:', data, error);
           if (error) throw error;
           currentUser = data.user;
@@ -755,7 +755,7 @@
     }
 
     async function handleLogout() {
-      await supabase.auth.signOut();
+      await supabaseClient.auth.signOut();
       currentUser = null;
       hideApp();
     }
@@ -763,7 +763,7 @@
     async function checkAuth() {
       showLoading();
       initSupabase();
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) {
         currentUser = session.user;
         showApp();
@@ -815,7 +815,7 @@
     }
 
     async function loadStudents() {
-      const { data, error } = await supabase.from('students').select('*').order('name');
+      const { data, error } = await supabaseClient.from('students').select('*').order('name');
       if (error) { showToast('Failed to load students', 'error'); return; }
       renderStudentsTable(data || []);
       populateStudentSelect('report-student', data || []);
@@ -825,8 +825,8 @@
 
     async function loadInventory() {
       const [booksRes, issuancesRes] = await Promise.all([
-        supabase.from('books').select('*').order('grade_level'),
-        supabase.from('book_issuances').select('*, books(title, grade_level), students(name)').order('issued_date', { ascending: false }),
+        supabaseClient.from('books').select('*').order('grade_level'),
+        supabaseClient.from('book_issuances').select('*, books(title, grade_level), students(name)').order('issued_date', { ascending: false }),
       ]);
 
       if (booksRes.error) { showToast('Failed to load books', 'error'); return; }
@@ -857,9 +857,9 @@
 
     async function loadDashboard() {
       const [studentsRes, reportsRes, booksRes] = await Promise.all([
-        supabase.from('students').select('id', { count: 'exact' }),
-        supabase.from('reports').select('id', { count: 'exact' }),
-        supabase.from('books').select('*'),
+        supabaseClient.from('students').select('id', { count: 'exact' }),
+        supabaseClient.from('reports').select('id', { count: 'exact' }),
+        supabaseClient.from('books').select('*'),
       ]);
 
       const studentsCount = studentsRes.count || 0;
@@ -1045,7 +1045,7 @@
     }
 
     async function editStudent(id) {
-      const { data, error } = await supabase.from('students').select('*').eq('id', id).single();
+      const { data, error } = await supabaseClient.from('students').select('*').eq('id', id).single();
       if (error || !data) { showToast('Student not found', 'error'); return; }
 
       document.getElementById('student-modal-title').textContent = 'Edit Student';
@@ -1077,10 +1077,10 @@
       showLoading();
       let error;
       if (id) {
-        const { error: err } = await supabase.from('students').update(student).eq('id', id);
+        const { error: err } = await supabaseClient.from('students').update(student).eq('id', id);
         error = err;
       } else {
-        const { error: err } = await supabase.from('students').insert(student);
+        const { error: err } = await supabaseClient.from('students').insert(student);
         error = err;
       }
 
@@ -1094,7 +1094,7 @@
     async function deleteStudent(id) {
       if (!confirm('Are you sure you want to delete this student? This cannot be undone.')) return;
       showLoading();
-      const { error } = await supabase.from('students').delete().eq('id', id);
+      const { error } = await supabaseClient.from('students').delete().eq('id', id);
       hideLoading();
       if (error) { showToast('Failed to delete student', 'error'); return; }
       showToast('Student deleted');
@@ -1102,12 +1102,12 @@
     }
 
     async function viewStudentProfile(id) {
-      const { data: student, error } = await supabase.from('students').select('*').eq('id', id).single();
+      const { data: student, error } = await supabaseClient.from('students').select('*').eq('id', id).single();
       if (error || !student) { showToast('Student not found', 'error'); return; }
 
       const [observationsRes, reportsRes] = await Promise.all([
-        supabase.from('observations').select('*').eq('student_id', id).order('observation_date', { ascending: false }).limit(5),
-        supabase.from('reports').select('*').eq('student_id', id).order('created_at', { ascending: false }).limit(5),
+        supabaseClient.from('observations').select('*').eq('student_id', id).order('observation_date', { ascending: false }).limit(5),
+        supabaseClient.from('reports').select('*').eq('student_id', id).order('created_at', { ascending: false }).limit(5),
       ]);
 
       document.getElementById('profile-student-name').textContent = student.name;
@@ -1172,7 +1172,7 @@
     }
 
     async function editBook(id) {
-      const { data, error } = await supabase.from('books').select('*').eq('id', id).single();
+      const { data, error } = await supabaseClient.from('books').select('*').eq('id', id).single();
       if (error || !data) { showToast('Book not found', 'error'); return; }
 
       document.getElementById('book-modal-title').textContent = 'Edit Book';
@@ -1198,10 +1198,10 @@
       showLoading();
       let error;
       if (id) {
-        const { error: err } = await supabase.from('books').update(book).eq('id', id);
+        const { error: err } = await supabaseClient.from('books').update(book).eq('id', id);
         error = err;
       } else {
-        const { error: err } = await supabase.from('books').insert(book);
+        const { error: err } = await supabaseClient.from('books').insert(book);
         error = err;
       }
 
@@ -1245,7 +1245,7 @@
       if (!bookId || !studentId) { showToast('Please select both book and student', 'error'); return; }
 
       showLoading();
-      const { error } = await supabase.from('book_issuances').insert({
+      const { error } = await supabaseClient.from('book_issuances').insert({
         book_id: bookId,
         student_id: studentId,
         condition_issued: document.getElementById('issue-condition').value,
@@ -1293,7 +1293,7 @@
       };
 
       showLoading();
-      const { error } = await supabase.from('observations').insert(observation);
+      const { error } = await supabaseClient.from('observations').insert(observation);
       hideLoading();
 
       if (error) { showToast('Failed to save observation: ' + error.message, 'error'); return; }
@@ -1305,7 +1305,7 @@
     async function deleteObservation(id) {
       if (!confirm('Delete this observation?')) return;
       showLoading();
-      await supabase.from('observations').delete().eq('id', id);
+      await supabaseClient.from('observations').delete().eq('id', id);
       hideLoading();
       showToast('Observation deleted');
       loadObservations();
@@ -1321,7 +1321,7 @@
       const tone = document.getElementById('report-tone').value;
       if (!studentId) { showToast('Please select a student', 'error'); return; }
 
-      const student = (await supabase.from('students').select('*').eq('id', studentId).single()).data;
+      const student = (await supabaseClient.from('students').select('*').eq('id', studentId).single()).data;
       if (!student) { showToast('Student not found', 'error'); return; }
 
       document.getElementById('generate-report-btn').classList.add('hidden');
@@ -1378,7 +1378,7 @@
       if (!studentId || !currentReportContent) { showToast('Generate a report first', 'error'); return; }
 
       showLoading();
-      const { error } = await supabase.from('reports').insert({
+      const { error } = await supabaseClient.from('reports').insert({
         student_id: studentId,
         tone: tone,
         content: currentReportContent,
@@ -1417,7 +1417,7 @@
     async function deleteReport(id) {
       if (!confirm('Delete this report?')) return;
       showLoading();
-      await supabase.from('reports').delete().eq('id', id);
+      await supabaseClient.from('reports').delete().eq('id', id);
       hideLoading();
       showToast('Report deleted');
       loadReports();
