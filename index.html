@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eli's Learning — Music School Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #111118;
+      --bg-tertiary: #1a1a24;
+      --accent-blue: #2563eb;
+      --accent-blue-light: #3b82f6;
+      --accent-blue-glow: rgba(37, 99, 235, 0.3);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: rgba(255, 255, 255, 0.07);
+      --border-hover: rgba(255, 255, 255, 0.15);
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --sidebar-width: 260px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    .hidden { display: none !important; }
+    .text-muted { color: var(--text-secondary); }
+    .text-success { color: var(--success); }
+    .text-warning { color: var(--warning); }
+    .text-danger { color: var(--danger); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 18px; border-radius: var(--radius-sm); font-size: 14px;
+      font-weight: 500; cursor: pointer; border: none; transition: all 0.2s ease; font-family: inherit;
+    }
+    .btn-primary { background: var(--accent-blue); color: white; }
+    .btn-primary:hover { background: var(--accent-blue-light); box-shadow: 0 0 20px var(--accent-blue-glow); }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); }
+    .btn-secondary:hover { background: var(--bg-secondary); border-color: var(--border-hover); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { opacity: 0.9; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: var(--radius-sm); }
+
+    /* Forms */
+    input, select, textarea {
+      width: 100%; padding: 10px 14px; background: var(--bg-primary);
+      border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+      color: var(--text-primary); font-size: 14px; font-family: inherit; transition: border-color 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-blue); }
+    input::placeholder { color: var(--text-muted); }
+    label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+    .form-group { margin-bottom: 16px; }
+
+    /* Cards */
+    .card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-title { font-size: 16px; font-weight: 600; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; transition: border-color 0.2s ease; }
+    .stat-card:hover { border-color: var(--border-hover); }
+    .stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-change { font-size: 12px; margin-top: 4px; }
+
+    /* Tables */
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-color); }
+    td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .badge-blue { background: rgba(37, 99, 235, 0.15); color: var(--accent-blue-light); }
+    .badge-green { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .badge-yellow { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .badge-gray { background: rgba(100, 116, 139, 0.15); color: var(--text-secondary); }
+
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .modal { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 1px solid var(--border-color); }
+    .modal-title { font-size: 18px; font-weight: 600; }
+    .modal-body { padding: 20px; }
+    .modal-footer { display: flex; gap: 12px; justify-content: flex-end; padding: 20px; border-top: 1px solid var(--border-color); }
+
+    /* Toast */
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+    .toast { padding: 14px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease; max-width: 350px; }
+    .toast-success { background: var(--success); color: white; }
+    .toast-error { background: var(--danger); color: white; }
+    .toast-warning { background: var(--warning); color: black; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Spinner */
+    .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border-color); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 10, 15, 0.8); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+
+    /* Auth */
+    .auth-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .auth-box { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 40px; width: 100%; max-width: 400px; }
+    .auth-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; text-align: center; }
+    .auth-subtitle { color: var(--text-secondary); text-align: center; margin-bottom: 32px; }
+
+    /* Layout */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: var(--sidebar-width); background: var(--bg-secondary); border-right: 1px solid var(--border-color); position: fixed; top: 0; left: 0; height: 100vh; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 20px; border-bottom: 1px solid var(--border-color); }
+    .sidebar-logo { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+    .sidebar-subtitle { font-size: 12px; color: var(--text-muted); }
+    .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-sm); color: var(--text-secondary); cursor: pointer; transition: all 0.15s ease; margin-bottom: 4px; }
+    .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .nav-item.active { background: rgba(37, 99, 235, 0.15); color: var(--accent-blue-light); }
+    .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .sidebar-footer { padding: 16px; border-top: 1px solid var(--border-color); }
+    .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 32px; max-width: calc(100vw - var(--sidebar-width)); }
+    .page-header { margin-bottom: 32px; }
+    .page-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .page-subtitle { color: var(--text-secondary); }
+
+    /* Report Preview */
+    .report-preview { background: white; color: #1a1a1a; padding: 40px; border-radius: var(--radius-md); font-family: Georgia, serif; line-height: 1.8; }
+    .report-preview h3 { font-size: 20px; margin-bottom: 16px; text-align: center; color: #1a1a1a; }
+    .report-preview p { margin-bottom: 16px; text-align: justify; }
+    .report-preview .signature { margin-top: 40px; text-align: right; font-style: italic; }
+
+    /* Inventory Dashboard */
+    .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .inventory-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; }
+    .inventory-card.low-stock { border-color: var(--danger); }
+    .inventory-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .inventory-card-title { font-weight: 600; font-size: 16px; }
+    .inventory-card-grade { font-size: 12px; color: var(--text-muted); }
+    .inventory-card-stock { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+    .inventory-card-stock-value { font-size: 28px; font-weight: 700; }
+    .inventory-card-issued { font-size: 13px; color: var(--text-secondary); }
+    .inventory-card-actions { display: flex; gap: 8px; }
+
+    /* Observation Timeline */
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border-color); }
+    .timeline-item { position: relative; margin-bottom: 24px; }
+    .timeline-item::before { content: ''; position: absolute; left: -20px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent-blue); border: 2px solid var(--bg-primary); }
+    .timeline-date { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .timeline-title { font-weight: 600; margin-bottom: 4px; }
+    .timeline-content { color: var(--text-secondary); font-size: 14px; }
+    .timeline-category { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg-tertiary); color: var(--text-muted); margin-top: 8px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 0; }
+    .tab { padding: 12px 20px; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s ease; }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active { color: var(--accent-blue-light); border-bottom-color: var(--accent-blue); }
+
+    /* Empty State */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+    .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-state h3 { font-size: 18px; color: var(--text-primary); margin-bottom: 8px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); z-index: 1000; }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; padding: 16px; max-width: 100vw; }
+      .mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); }
+    }
+    @media (min-width: 769px) {
+      .mobile-header { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- Auth Screen -->
+  <div id="auth-screen" class="auth-container">
+    <div class="auth-box">
+      <div class="auth-title">Eli's Learning</div>
+      <div class="auth-subtitle">Music School Management</div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="Your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+      </form>
+      <div id="auth-error" class="text-danger" style="margin-top: 16px; text-align: center; font-size: 14px;"></div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app-layout" class="layout hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">Eli's Learning</div>
+        <div class="sidebar-subtitle">Music School</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-page="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-item" data-page="students">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Students</span>
+        </div>
+        <div class="nav-item" data-page="inventory">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Book Inventory</span>
+        </div>
+        <div class="nav-item" data-page="reports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Reports</span>
+        </div>
+        <div class="nav-item" data-page="observations">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Observations</span>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div id="user-info" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;"></div>
+        <button id="logout-btn" class="btn btn-secondary" style="width: 100%;">Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+      <div class="sidebar-logo">Eli's Learning</div>
+      <button id="mobile-menu-btn" class="btn btn-secondary btn-sm">Menu</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Page -->
+      <div id="page-dashboard" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Overview of your music school</p>
+        </div>
+        <div class="stats-grid" id="dashboard-stats"></div>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Recent Activity</h3>
+          </div>
+          <div id="recent-activity"></div>
+        </div>
+      </div>
+
+      <!-- Students Page -->
+      <div id="page-students" class="page hidden">
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h1 class="page-title">Students</h1>
+            <p class="page-subtitle">Manage your student roster</p>
+          </div>
+          <button id="add-student-btn" class="btn btn-primary">+ Add Student</button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Name</th><th>Grade</th><th>Instrument</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="students-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Page -->
+      <div id="page-inventory" class="page hidden">
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h1 class="page-title">Book Inventory</h1>
+            <p class="page-subtitle">Track books and stock levels</p>
+          </div>
+          <button id="add-book-btn" class="btn btn-primary">+ Add Book</button>
+        </div>
+        <div id="low-stock-alerts"></div>
+        <div class="inventory-grid" id="inventory-grid"></div>
+        <div class="card" style="margin-top: 24px;">
+          <div class="card-header"><h3 class="card-title">Issuance Log</h3></div>
+          <div class="table-container">
+            <table><thead><tr><th>Book</th><th>Student</th><th>Date Issued</th><th>Status</th></tr></thead>
+            <tbody id="issuance-log-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports Page -->
+      <div id="page-reports" class="page hidden">
+        <div class="page-header">
+          <h1 class="page-title">Progress Reports</h1>
+          <p class="page-subtitle">Generate AI-powered music progress reports</p>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <div class="card">
+            <h3 class="card-title" style="margin-bottom: 20px;">Generate New Report</h3>
+            <div class="form-group">
+              <label for="report-student">Select Student</label>
+              <select id="report-student"><option value="">Choose a student...</option></select>
+            </div>
+            <div class="form-group">
+              <label for="report-tone">Report Tone</label>
+              <select id="report-tone">
+                <option value="good">Good — Positive and encouraging</option>
+                <option value="average">Average — Balanced feedback</option>
+                <option value="needs_improvement">Needs Improvement — Constructive concern</option>
+              </select>
+            </div>
+            <button id="generate-report-btn" class="btn btn-primary" style="width: 100%;">Generate Report</button>
+            <div id="report-generating" class="hidden" style="text-align: center; padding: 20px;">
+              <div class="loading-spinner" style="margin: 0 auto 12px;"></div>
+              <p class="text-muted">Generating report...</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title" style="margin-bottom: 20px;">Report Preview</h3>
+            <div id="report-preview" class="report-preview hidden"></div>
+            <div id="report-placeholder" class="empty-state">
+              <p>Generate a report to see preview</p>
+            </div>
+            <div id="report-actions" class="hidden" style="margin-top: 20px; display: flex; gap: 12px;">
+              <button id="save-report-btn" class="btn btn-success">Save Report</button>
+              <button id="copy-report-btn" class="btn btn-secondary">Copy to Clipboard</button>
+              <button id="print-report-btn" class="btn btn-secondary">Print</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 24px;">
+          <div class="card-header"><h3 class="card-title">Saved Reports</h3></div>
+          <div class="table-container">
+            <table><thead><tr><th>Date</th><th>Student</th><th>Tone</th><th>Actions</th></tr></thead>
+            <tbody id="saved-reports-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Observations Page -->
+      <div id="page-observations" class="page hidden">
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h1 class="page-title">Observations</h1>
+            <p class="page-subtitle">Session notes and student observations</p>
+          </div>
+          <button id="add-observation-btn" class="btn btn-primary">+ Add Observation</button>
+        </div>
+        <div class="tabs">
+          <div class="tab active" data-tab="timeline">Timeline View</div>
+          <div class="tab" data-tab="list">List View</div>
+        </div>
+        <div id="observations-timeline" class="card">
+          <div class="timeline" id="observations-timeline-content"></div>
+        </div>
+        <div id="observations-list" class="card hidden">
+          <div class="table-container">
+            <table><thead><tr><th>Date</th><th>Student</th><th>Category</th><th>Title</th><th>Actions</th></tr></thead>
+            <tbody id="observations-list-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <!-- Student Modal -->
+  <div id="student-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="student-modal-title">Add Student</h2>
+        <button class="btn btn-icon btn-secondary" onclick="closeModal('student-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="student-id">
+        <div class="form-group">
+          <label for="student-name">Student Name *</label>
+          <input type="text" id="student-name" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label for="student-email">Email</label>
+            <input type="email" id="student-email">
+          </div>
+          <div class="form-group">
+            <label for="student-phone">Phone</label>
+            <input type="tel" id="student-phone">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label for="student-grade">Grade Level</label>
+            <select id="student-grade">
+              <option value="1">Grade 1</option>
+              <option value="2">Grade 2</option>
+              <option value="3">Grade 3</option>
+              <option value="4">Grade 4</option>
+              <option value="5">Grade 5</option>
+              <option value="6">Grade 6</option>
+              <option value="7">Grade 7</option>
+              <option value="8">Grade 8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="student-instrument">Instrument</label>
+            <select id="student-instrument">
+              <option value="Piano">Piano</option>
+              <option value="Guitar">Guitar</option>
+              <option value="Violin">Violin</option>
+              <option value="Voice">Voice</option>
+              <option value="Drums">Drums</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="student-parent">Parent/Guardian Name</label>
+          <input type="text" id="student-parent">
+        </div>
+        <div class="form-group">
+          <label for="student-status">Status</label>
+          <select id="student-status">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="archived">Archived</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="student-notes">Notes</label>
+          <textarea id="student-notes" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('student-modal')">Cancel</button>
+        <button id="save-student-btn" class="btn btn-primary">Save Student</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Book Modal -->
+  <div id="book-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="book-modal-title">Add Book</h2>
+        <button class="btn btn-icon btn-secondary" onclick="closeModal('book-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="book-id">
+        <div class="form-group">
+          <label for="book-title">Book Title *</label>
+          <input type="text" id="book-title" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label for="book-grade">Grade Level *</label>
+            <select id="book-grade">
+              <option value="1">Grade 1</option>
+              <option value="2">Grade 2</option>
+              <option value="3">Grade 3</option>
+              <option value="4">Grade 4</option>
+              <option value="5">Grade 5</option>
+              <option value="6">Grade 6</option>
+              <option value="7">Grade 7</option>
+              <option value="8">Grade 8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="book-stock">Initial Stock *</label>
+            <input type="number" id="book-stock" min="0" value="5" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="book-threshold">Low Stock Alert Threshold</label>
+          <input type="number" id="book-threshold" min="0" value="2">
+        </div>
+        <div class="form-group">
+          <label for="book-isbn">ISBN</label>
+          <input type="text" id="book-isbn">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('book-modal')">Cancel</button>
+        <button id="save-book-btn" class="btn btn-primary">Save Book</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Issue Book Modal -->
+  <div id="issue-book-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Issue Book to Student</h2>
+        <button class="btn btn-icon btn-secondary" onclick="closeModal('issue-book-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="issue-book-select">Book *</label>
+          <select id="issue-book-select" required></select>
+        </div>
+        <div class="form-group">
+          <label for="issue-student-select">Student *</label>
+          <select id="issue-student-select" required></select>
+        </div>
+        <div class="form-group">
+          <label for="issue-condition">Condition</label>
+          <select id="issue-condition">
+            <option value="good">Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="issue-notes">Notes</label>
+          <textarea id="issue-notes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('issue-book-modal')">Cancel</button>
+        <button id="confirm-issue-btn" class="btn btn-primary">Issue Book</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Observation Modal -->
+  <div id="observation-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="observation-modal-title">Add Observation</h2>
+        <button class="btn btn-icon btn-secondary" onclick="closeModal('observation-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="observation-id">
+        <div class="form-group">
+          <label for="observation-student">Student *</label>
+          <select id="observation-student" required></select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label for="observation-date">Date *</label>
+            <input type="date" id="observation-date" required>
+          </div>
+          <div class="form-group">
+            <label for="observation-category">Category</label>
+            <select id="observation-category">
+              <option value="general">General</option>
+              <option value="progress">Progress</option>
+              <option value="behavior">Behavior</option>
+              <option value="technique">Technique</option>
+              <option value="performance">Performance</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="observation-title">Title *</label>
+          <input type="text" id="observation-title" required>
+        </div>
+        <div class="form-group">
+          <label for="observation-content">Observation Notes *</label>
+          <textarea id="observation-content" rows="4" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="observation-flags">Flags (comma-separated)</label>
+          <input type="text" id="observation-flags" placeholder="e.g. needs_attention, practice_issue">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="observation-followup"> Follow-up required
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('observation-modal')">Cancel</button>
+        <button id="save-observation-btn" class="btn btn-primary">Save Observation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Profile Modal -->
+  <div id="profile-modal" class="modal-overlay hidden">
+    <div class="modal" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="profile-student-name">Student Profile</h2>
+        <button class="btn btn-icon btn-secondary" onclick="closeModal('profile-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="profile-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('profile-modal')">Close</button>
+        <button id="profile-issue-btn" class="btn btn-primary">Issue Book</button>
+        <button id="profile-observation-btn" class="btn btn-secondary">Add Observation</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    const CONFIG = window.APP_CONFIG || {
+      SUPABASE_URL: 'https://vcoqzeieuprsjksawwzx.supabase.co',
+      SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjb3F6ZWlldXByc2prc2F3d3p4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5MjYxOTQsImV4cCI6MjA2MDUwMjE5NH0.Vx6eWTZLK2rW很长的假密钥，实际使用时请替换',
+      GENERATE_REPORT_FUNCTION: '/.netlify/functions/generate-report',
+    };
+
+    // ============================================
+    // SUPABASE CLIENT
+    // ============================================
+    let supabase = null;
+    let currentUser = null;
+
+    function initSupabase() {
+      supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    }
+
+    // ============================================
+    // UTILITIES
+    // ============================================
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    function showLoading() { document.getElementById('loading-overlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loading-overlay').classList.add('hidden'); }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function formatDate(dateStr) {
+      return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function debounce(fn, delay) {
+      let timeout;
+      return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    // ============================================
+    // AUTH
+    // ============================================
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errorDiv = document.getElementById('auth-error');
+      errorDiv.textContent = '';
+
+      try {
+        showLoading();
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        currentUser = data.user;
+        showApp();
+      } catch (err) {
+        errorDiv.textContent = err.message || 'Login failed. Please check your credentials.';
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function handleLogout() {
+      await supabase.auth.signOut();
+      currentUser = null;
+      hideApp();
+    }
+
+    async function checkAuth() {
+      showLoading();
+      initSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        showApp();
+      } else {
+        document.getElementById('auth-screen').classList.remove('hidden');
+      }
+      hideLoading();
+    }
+
+    function showApp() {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-layout').classList.remove('hidden');
+      document.getElementById('user-info').textContent = currentUser.email;
+      loadAllData();
+      navigateTo('dashboard');
+    }
+
+    function hideApp() {
+      document.getElementById('app-layout').classList.add('hidden');
+      document.getElementById('auth-screen').classList.remove('hidden');
+    }
+
+    // ============================================
+    // NAVIGATION
+    // ============================================
+    function navigateTo(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(`page-${page}`)?.classList.remove('hidden');
+      document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+
+      if (page === 'dashboard') loadDashboard();
+      if (page === 'students') loadStudents();
+      if (page === 'inventory') loadInventory();
+      if (page === 'reports') loadReports();
+      if (page === 'observations') loadObservations();
+    }
+
+    // ============================================
+    // DATA LOADING
+    // ============================================
+    async function loadAllData() {
+      await Promise.all([
+        loadStudents(),
+        loadInventory(),
+        loadReports(),
+        loadObservations(),
+      ]);
+    }
+
+    async function loadStudents() {
+      const { data, error } = await supabase.from('students').select('*').order('name');
+      if (error) { showToast('Failed to load students', 'error'); return; }
+      renderStudentsTable(data || []);
+      populateStudentSelect('report-student', data || []);
+      populateStudentSelect('observation-student', data || []);
+      populateStudentSelect('issue-student-select', data || []);
+    }
+
+    async function loadInventory() {
+      const [booksRes, issuancesRes] = await Promise.all([
+        supabase.from('books').select('*').order('grade_level'),
+        supabase.from('book_issuances').select('*, books(title, grade_level), students(name)').order('issued_date', { ascending: false }),
+      ]);
+
+      if (booksRes.error) { showToast('Failed to load books', 'error'); return; }
+      if (issuancesRes.error) { showToast('Failed to load issuances', 'error'); return; }
+
+      renderInventory(booksRes.data || []);
+      renderIssuanceLog(issuancesRes.data || []);
+      populateBookSelect(booksRes.data || []);
+    }
+
+    async function loadReports() {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*, students(name)')
+        .order('created_at', { ascending: false });
+      if (error) { showToast('Failed to load reports', 'error'); return; }
+      renderSavedReports(data || []);
+    }
+
+    async function loadObservations() {
+      const { data, error } = await supabase
+        .from('observations')
+        .select('*, students(name)')
+        .order('observation_date', { ascending: false });
+      if (error) { showToast('Failed to load observations', 'error'); return; }
+      renderObservations(data || []);
+    }
+
+    async function loadDashboard() {
+      const [studentsRes, reportsRes, booksRes] = await Promise.all([
+        supabase.from('students').select('id', { count: 'exact' }),
+        supabase.from('reports').select('id', { count: 'exact' }),
+        supabase.from('books').select('*'),
+      ]);
+
+      const studentsCount = studentsRes.count || 0;
+      const reportsCount = reportsRes.count || 0;
+      const lowStock = (booksRes.data || []).filter(b => b.total_stock <= b.low_stock_threshold);
+
+      document.getElementById('dashboard-stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Total Students</div>
+          <div class="stat-value">${studentsCount}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Reports Generated</div>
+          <div class="stat-value">${reportsCount}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Book Titles</div>
+          <div class="stat-value">${(booksRes.data || []).length}</div>
+        </div>
+        <div class="stat-card ${lowStock.length > 0 ? 'text-warning' : ''}">
+          <div class="stat-label">Low Stock Alerts</div>
+          <div class="stat-value">${lowStock.length}</div>
+        </div>
+      `;
+
+      const recentReports = await supabase
+        .from('reports')
+        .select('*, students(name)')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      const activityHtml = (recentReports.data || []).map(r => `
+        <div style="padding: 12px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+          <div>
+            <strong>${r.students?.name || 'Unknown'}</strong> — ${r.tone.replace('_', ' ')} report
+          </div>
+          <div class="text-muted">${formatDate(r.created_at)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('recent-activity').innerHTML = activityHtml || '<p class="text-muted">No recent activity</p>';
+    }
+
+    // ============================================
+    // RENDER FUNCTIONS
+    // ============================================
+    function renderStudentsTable(students) {
+      const tbody = document.getElementById('students-table-body');
+      if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No students yet. Add your first student!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = students.map(s => `
+        <tr>
+          <td><strong>${s.name}</strong></td>
+          <td>Grade ${s.grade_level}</td>
+          <td>${s.instrument}</td>
+          <td><span class="badge badge-${s.status === 'active' ? 'green' : s.status === 'inactive' ? 'yellow' : 'gray'}">${s.status}</span></td>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="viewStudentProfile('${s.id}')">View</button>
+            <button class="btn btn-sm btn-secondary" onclick="editStudent('${s.id}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteStudent('${s.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderInventory(books) {
+      const grid = document.getElementById('inventory-grid');
+      const alertsDiv = document.getElementById('low-stock-alerts');
+
+      const lowStockBooks = books.filter(b => b.total_stock <= b.low_stock_threshold);
+
+      if (lowStockBooks.length > 0) {
+        alertsDiv.innerHTML = `
+          <div class="card" style="border-color: var(--danger); margin-bottom: 24px; background: rgba(239, 68, 68, 0.05);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">⚠️</span>
+              <div>
+                <strong class="text-danger">Low Stock Alert</strong>
+                <p class="text-muted" style="margin: 0; font-size: 13px;">${lowStockBooks.map(b => `${b.title} (Grade ${b.grade_level}) — ${b.total_stock} left`).join(', ')}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        alertsDiv.innerHTML = '';
+      }
+
+      grid.innerHTML = books.map(b => `
+        <div class="inventory-card ${b.total_stock <= b.low_stock_threshold ? 'low-stock' : ''}">
+          <div class="inventory-card-header">
+            <div>
+              <div class="inventory-card-title">${b.title}</div>
+              <div class="inventory-card-grade">Grade ${b.grade_level}</div>
+            </div>
+            <span class="badge ${b.total_stock <= b.low_stock_threshold ? 'badge-red' : 'badge-green'}">
+              ${b.total_stock} in stock
+            </span>
+          </div>
+          <div class="inventory-card-stock">
+            <span class="inventory-card-stock-value">${b.total_stock}</span>
+            <span class="inventory-card-issued">of ${b.total_stock + (b.issued_count || 0)} available</span>
+          </div>
+          <div class="inventory-card-actions">
+            <button class="btn btn-sm btn-primary" onclick="openIssueModal('${b.id}')">Issue</button>
+            <button class="btn btn-sm btn-secondary" onclick="editBook('${b.id}')">Edit</button>
+          </div>
+        </div>
+      `).join('') || '<div class="empty-state"><p>No books in inventory. Add your first book!</p></div>';
+    }
+
+    function renderIssuanceLog(issuances) {
+      const tbody = document.getElementById('issuance-log-body');
+      tbody.innerHTML = issuances.map(i => `
+        <tr>
+          <td>${i.books?.title || 'Unknown'} (Grade ${i.books?.grade_level || '?'})</td>
+          <td>${i.students?.name || 'Unknown'}</td>
+          <td>${formatDate(i.issued_date)}</td>
+          <td><span class="badge ${i.returned_date ? 'badge-gray' : 'badge-green'}">${i.returned_date ? 'Returned' : 'Active'}</span></td>
+        </tr>
+      `).join('') || '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No issuances recorded</td></tr>';
+    }
+
+    function renderSavedReports(reports) {
+      const tbody = document.getElementById('saved-reports-body');
+      tbody.innerHTML = reports.map(r => `
+        <tr>
+          <td>${formatDate(r.created_at)}</td>
+          <td>${r.students?.name || 'Unknown'}</td>
+          <td><span class="badge badge-${r.tone === 'good' ? 'green' : r.tone === 'average' ? 'yellow' : 'red'}">${r.tone.replace('_', ' ')}</span></td>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="viewReport('${r.id}')">View</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteReport('${r.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No saved reports</td></tr>';
+    }
+
+    function renderObservations(observations) {
+      const timeline = document.getElementById('observations-timeline-content');
+      const list = document.getElementById('observations-list-body');
+
+      timeline.innerHTML = observations.map(o => `
+        <div class="timeline-item">
+          <div class="timeline-date">${formatDate(o.observation_date)} — ${o.students?.name || 'Unknown'}</div>
+          <div class="timeline-title">${o.title}</div>
+          <div class="timeline-content">${o.content}</div>
+          <span class="timeline-category">${o.category}</span>
+          ${o.flags?.length > 0 ? o.flags.map(f => `<span class="badge badge-red" style="margin-left: 8px;">${f}</span>`).join('') : ''}
+        </div>
+      `).join('') || '<p class="text-muted">No observations recorded</p>';
+
+      list.innerHTML = observations.map(o => `
+        <tr>
+          <td>${formatDate(o.observation_date)}</td>
+          <td>${o.students?.name || 'Unknown'}</td>
+          <td><span class="badge badge-gray">${o.category}</span></td>
+          <td>${o.title}</td>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="viewObservation('${o.id}')">View</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteObservation('${o.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No observations</td></tr>';
+    }
+
+    // ============================================
+    // STUDENT CRUD
+    // ============================================
+    function openAddStudent() {
+      document.getElementById('student-modal-title').textContent = 'Add Student';
+      document.getElementById('student-id').value = '';
+      document.getElementById('student-name').value = '';
+      document.getElementById('student-email').value = '';
+      document.getElementById('student-phone').value = '';
+      document.getElementById('student-grade').value = '1';
+      document.getElementById('student-instrument').value = 'Piano';
+      document.getElementById('student-parent').value = '';
+      document.getElementById('student-status').value = 'active';
+      document.getElementById('student-notes').value = '';
+      openModal('student-modal');
+    }
+
+    async function editStudent(id) {
+      const { data, error } = await supabase.from('students').select('*').eq('id', id).single();
+      if (error || !data) { showToast('Student not found', 'error'); return; }
+
+      document.getElementById('student-modal-title').textContent = 'Edit Student';
+      document.getElementById('student-id').value = data.id;
+      document.getElementById('student-name').value = data.name;
+      document.getElementById('student-email').value = data.email || '';
+      document.getElementById('student-phone').value = data.phone || '';
+      document.getElementById('student-grade').value = data.grade_level || 1;
+      document.getElementById('student-instrument').value = data.instrument || 'Piano';
+      document.getElementById('student-parent').value = data.parent_name || '';
+      document.getElementById('student-status').value = data.status || 'active';
+      document.getElementById('student-notes').value = data.notes || '';
+      openModal('student-modal');
+    }
+
+    async function saveStudent() {
+      const id = document.getElementById('student-id').value;
+      const student = {
+        name: document.getElementById('student-name').value,
+        email: document.getElementById('student-email').value || null,
+        phone: document.getElementById('student-phone').value || null,
+        parent_name: document.getElementById('student-parent').value || null,
+        grade_level: parseInt(document.getElementById('student-grade').value),
+        instrument: document.getElementById('student-instrument').value,
+        status: document.getElementById('student-status').value,
+        notes: document.getElementById('student-notes').value || null,
+      };
+
+      showLoading();
+      let error;
+      if (id) {
+        const { error: err } = await supabase.from('students').update(student).eq('id', id);
+        error = err;
+      } else {
+        const { error: err } = await supabase.from('students').insert(student);
+        error = err;
+      }
+
+      hideLoading();
+      if (error) { showToast('Failed to save student: ' + error.message, 'error'); return; }
+      showToast('Student saved successfully');
+      closeModal('student-modal');
+      loadStudents();
+    }
+
+    async function deleteStudent(id) {
+      if (!confirm('Are you sure you want to delete this student? This cannot be undone.')) return;
+      showLoading();
+      const { error } = await supabase.from('students').delete().eq('id', id);
+      hideLoading();
+      if (error) { showToast('Failed to delete student', 'error'); return; }
+      showToast('Student deleted');
+      loadStudents();
+    }
+
+    async function viewStudentProfile(id) {
+      const { data: student, error } = await supabase.from('students').select('*').eq('id', id).single();
+      if (error || !student) { showToast('Student not found', 'error'); return; }
+
+      const [observationsRes, reportsRes] = await Promise.all([
+        supabase.from('observations').select('*').eq('student_id', id).order('observation_date', { ascending: false }).limit(5),
+        supabase.from('reports').select('*').eq('student_id', id).order('created_at', { ascending: false }).limit(5),
+      ]);
+
+      document.getElementById('profile-student-name').textContent = student.name;
+      document.getElementById('profile-content').innerHTML = `
+        <div class="stats-grid" style="margin-bottom: 24px;">
+          <div class="stat-card">
+            <div class="stat-label">Grade Level</div>
+            <div class="stat-value">${student.grade_level}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Instrument</div>
+            <div class="stat-value">${student.instrument}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Status</div>
+            <div class="stat-value"><span class="badge badge-${student.status === 'active' ? 'green' : 'yellow'}">${student.status}</span></div>
+          </div>
+        </div>
+        <h4 style="margin-bottom: 12px;">Recent Observations</h4>
+        ${(observationsRes.data || []).map(o => `
+          <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 8px;">
+            <div style="font-size: 12px; color: var(--text-muted);">${formatDate(o.observation_date)}</div>
+            <div style="font-weight: 500;">${o.title}</div>
+            <div style="font-size: 13px; color: var(--text-secondary);">${o.content}</div>
+          </div>
+        `).join('') || '<p class="text-muted">No observations</p>'}
+        <h4 style="margin: 24px 0 12px;">Recent Reports</h4>
+        ${(reportsRes.data || []).map(r => `
+          <div style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span class="badge badge-${r.tone === 'good' ? 'green' : r.tone === 'average' ? 'yellow' : 'red'}">${r.tone.replace('_', ' ')}</span>
+              <span style="font-size: 12px; color: var(--text-muted);">${formatDate(r.created_at)}</span>
+            </div>
+          </div>
+        `).join('') || '<p class="text-muted">No reports</p>'}
+      `;
+
+      document.getElementById('profile-issue-btn').onclick = () => {
+        closeModal('profile-modal');
+        openIssueModalForStudent(id);
+      };
+      document.getElementById('profile-observation-btn').onclick = () => {
+        closeModal('profile-modal');
+        openAddObservation(id);
+      };
+
+      openModal('profile-modal');
+    }
+
+    // ============================================
+    // BOOK CRUD
+    // ============================================
+    function openAddBook() {
+      document.getElementById('book-modal-title').textContent = 'Add Book';
+      document.getElementById('book-id').value = '';
+      document.getElementById('book-title').value = '';
+      document.getElementById('book-grade').value = '1';
+      document.getElementById('book-stock').value = '5';
+      document.getElementById('book-threshold').value = '2';
+      document.getElementById('book-isbn').value = '';
+      openModal('book-modal');
+    }
+
+    async function editBook(id) {
+      const { data, error } = await supabase.from('books').select('*').eq('id', id).single();
+      if (error || !data) { showToast('Book not found', 'error'); return; }
+
+      document.getElementById('book-modal-title').textContent = 'Edit Book';
+      document.getElementById('book-id').value = data.id;
+      document.getElementById('book-title').value = data.title;
+      document.getElementById('book-grade').value = data.grade_level;
+      document.getElementById('book-stock').value = data.total_stock;
+      document.getElementById('book-threshold').value = data.low_stock_threshold;
+      document.getElementById('book-isbn').value = data.isbn || '';
+      openModal('book-modal');
+    }
+
+    async function saveBook() {
+      const id = document.getElementById('book-id').value;
+      const book = {
+        title: document.getElementById('book-title').value,
+        grade_level: parseInt(document.getElementById('book-grade').value),
+        total_stock: parseInt(document.getElementById('book-stock').value),
+        low_stock_threshold: parseInt(document.getElementById('book-threshold').value),
+        isbn: document.getElementById('book-isbn').value || null,
+      };
+
+      showLoading();
+      let error;
+      if (id) {
+        const { error: err } = await supabase.from('books').update(book).eq('id', id);
+        error = err;
+      } else {
+        const { error: err } = await supabase.from('books').insert(book);
+        error = err;
+      }
+
+      hideLoading();
+      if (error) { showToast('Failed to save book: ' + error.message, 'error'); return; }
+      showToast('Book saved successfully');
+      closeModal('book-modal');
+      loadInventory();
+    }
+
+    // ============================================
+    // BOOK ISSUANCE
+    // ============================================
+    function populateBookSelect(books) {
+      const select = document.getElementById('issue-book-select');
+      select.innerHTML = '<option value="">Select a book...</option>' +
+        books.filter(b => b.total_stock > 0).map(b =>
+          `<option value="${b.id}">${b.title} (Grade ${b.grade_level}) — ${b.total_stock} available</option>`
+        ).join('');
+    }
+
+    function openIssueModal(bookId) {
+      document.getElementById('issue-book-select').value = bookId || '';
+      document.getElementById('issue-student-select').value = '';
+      document.getElementById('issue-condition').value = 'good';
+      document.getElementById('issue-notes').value = '';
+      openModal('issue-book-modal');
+    }
+
+    function openIssueModalForStudent(studentId) {
+      document.getElementById('issue-book-select').value = '';
+      document.getElementById('issue-student-select').value = studentId;
+      document.getElementById('issue-condition').value = 'good';
+      document.getElementById('issue-notes').value = '';
+      openModal('issue-book-modal');
+    }
+
+    async function issueBook() {
+      const bookId = document.getElementById('issue-book-select').value;
+      const studentId = document.getElementById('issue-student-select').value;
+      if (!bookId || !studentId) { showToast('Please select both book and student', 'error'); return; }
+
+      showLoading();
+      const { error } = await supabase.from('book_issuances').insert({
+        book_id: bookId,
+        student_id: studentId,
+        condition_issued: document.getElementById('issue-condition').value,
+        notes: document.getElementById('issue-notes').value || null,
+      });
+      hideLoading();
+
+      if (error) { showToast('Failed to issue book: ' + error.message, 'error'); return; }
+      showToast('Book issued successfully');
+      closeModal('issue-book-modal');
+      loadInventory();
+    }
+
+    // ============================================
+    // OBSERVATION CRUD
+    // ============================================
+    function openAddObservation(studentId = null) {
+      document.getElementById('observation-modal-title').textContent = 'Add Observation';
+      document.getElementById('observation-id').value = '';
+      document.getElementById('observation-student').value = studentId || '';
+      document.getElementById('observation-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('observation-category').value = 'general';
+      document.getElementById('observation-title').value = '';
+      document.getElementById('observation-content').value = '';
+      document.getElementById('observation-flags').value = '';
+      document.getElementById('observation-followup').checked = false;
+      openModal('observation-modal');
+    }
+
+    async function saveObservation() {
+      const studentId = document.getElementById('observation-student').value;
+      if (!studentId) { showToast('Please select a student', 'error'); return; }
+
+      const flagsVal = document.getElementById('observation-flags').value;
+      const flags = flagsVal ? flagsVal.split(',').map(f => f.trim()).filter(f => f) : [];
+
+      const observation = {
+        student_id: studentId,
+        observation_date: document.getElementById('observation-date').value,
+        category: document.getElementById('observation-category').value,
+        title: document.getElementById('observation-title').value,
+        content: document.getElementById('observation-content').value,
+        flags: flags,
+        follow_up_required: document.getElementById('observation-followup').checked,
+      };
+
+      showLoading();
+      const { error } = await supabase.from('observations').insert(observation);
+      hideLoading();
+
+      if (error) { showToast('Failed to save observation: ' + error.message, 'error'); return; }
+      showToast('Observation saved');
+      closeModal('observation-modal');
+      loadObservations();
+    }
+
+    async function deleteObservation(id) {
+      if (!confirm('Delete this observation?')) return;
+      showLoading();
+      await supabase.from('observations').delete().eq('id', id);
+      hideLoading();
+      showToast('Observation deleted');
+      loadObservations();
+    }
+
+    // ============================================
+    // REPORT GENERATION
+    // ============================================
+    let currentReportContent = '';
+
+    async function generateReport() {
+      const studentId = document.getElementById('report-student').value;
+      const tone = document.getElementById('report-tone').value;
+      if (!studentId) { showToast('Please select a student', 'error'); return; }
+
+      const student = (await supabase.from('students').select('*').eq('id', studentId).single()).data;
+      if (!student) { showToast('Student not found', 'error'); return; }
+
+      document.getElementById('generate-report-btn').classList.add('hidden');
+      document.getElementById('report-generating').classList.remove('hidden');
+
+      try {
+        const response = await fetch(CONFIG.GENERATE_REPORT_FUNCTION, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentName: student.name,
+            tone: tone,
+            gradeLevel: student.grade_level,
+            instrument: student.instrument,
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Failed to generate report');
+        }
+
+        const result = await response.json();
+        currentReportContent = result.report;
+
+        const preview = document.getElementById('report-preview');
+        const placeholder = document.getElementById('report-placeholder');
+        const actions = document.getElementById('report-actions');
+
+        preview.innerHTML = `
+          <h3>Music Progress Report — ${student.name}</h3>
+          ${currentReportContent.split('\n').map(p => p.trim() ? `<p>${p}</p>` : '').join('')}
+          <div class="signature">
+            <p>Eli's Learning Music School</p>
+            <p>${formatDate(new Date())}</p>
+          </div>
+        `;
+
+        preview.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+        actions.classList.remove('hidden');
+
+      } catch (err) {
+        showToast('Failed to generate report: ' + err.message, 'error');
+      } finally {
+        document.getElementById('generate-report-btn').classList.remove('hidden');
+        document.getElementById('report-generating').classList.add('hidden');
+      }
+    }
+
+    async function saveReport() {
+      const studentId = document.getElementById('report-student').value;
+      const tone = document.getElementById('report-tone').value;
+      if (!studentId || !currentReportContent) { showToast('Generate a report first', 'error'); return; }
+
+      showLoading();
+      const { error } = await supabase.from('reports').insert({
+        student_id: studentId,
+        tone: tone,
+        content: currentReportContent,
+        generated_ai: true,
+      });
+      hideLoading();
+
+      if (error) { showToast('Failed to save report: ' + error.message, 'error'); return; }
+      showToast('Report saved successfully');
+      loadReports();
+      loadDashboard();
+    }
+
+    function copyReport() {
+      const studentId = document.getElementById('report-student').value;
+      const student = document.querySelector(`#report-student option[value="${studentId}"]`)?.text;
+      const text = `${student}\n\n${currentReportContent}\n\n— Eli's Learning Music School`;
+      navigator.clipboard.writeText(text).then(() => showToast('Report copied to clipboard'));
+    }
+
+    function printReport() {
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html><head><title>Progress Report</title>
+        <style>body { font-family: Georgia, serif; padding: 40px; line-height: 1.8; } h3 { text-align: center; } p { text-align: justify; margin-bottom: 16px; } .signature { margin-top: 40px; text-align: right; font-style: italic; }</style>
+        </head><body>
+        <h3>Music Progress Report</h3>
+        ${currentReportContent.split('\n').map(p => p.trim() ? `<p>${p}</p>` : '').join('')}
+        <div class="signature"><p>Eli's Learning Music School</p><p>${formatDate(new Date())}</p></div>
+        </body></html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    async function deleteReport(id) {
+      if (!confirm('Delete this report?')) return;
+      showLoading();
+      await supabase.from('reports').delete().eq('id', id);
+      hideLoading();
+      showToast('Report deleted');
+      loadReports();
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function populateStudentSelect(selectId, students) {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">Choose a student...</option>' +
+        students.map(s => `<option value="${s.id}">${s.name} (Grade ${s.grade_level})</option>`).join('');
+      select.value = currentVal;
+    }
+
+    // ============================================
+    // TAB HANDLING
+    // ============================================
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabGroup = tab.parentElement;
+        const tabName = tab.dataset.tab;
+        tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('observations-timeline').classList.toggle('hidden', tabName !== 'timeline');
+        document.getElementById('observations-list').classList.toggle('hidden', tabName !== 'list');
+      });
+    });
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    document.getElementById('login-form').addEventListener('submit', handleLogin);
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => navigateTo(item.dataset.page));
+    });
+
+    document.getElementById('add-student-btn').addEventListener('click', openAddStudent);
+    document.getElementById('save-student-btn').addEventListener('click', saveStudent);
+
+    document.getElementById('add-book-btn').addEventListener('click', openAddBook);
+    document.getElementById('save-book-btn').addEventListener('click', saveBook);
+
+    document.getElementById('confirm-issue-btn').addEventListener('click', issueBook);
+
+    document.getElementById('add-observation-btn').addEventListener('click', openAddObservation);
+    document.getElementById('save-observation-btn').addEventListener('click', saveObservation);
+
+    document.getElementById('generate-report-btn').addEventListener('click', generateReport);
+    document.getElementById('save-report-btn').addEventListener('click', saveReport);
+    document.getElementById('copy-report-btn').addEventListener('click', copyReport);
+    document.getElementById('print-report-btn').addEventListener('click', printReport);
+
+    // Mobile menu
+    document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+      document.querySelector('.sidebar').classList.toggle('open');
+    });
+
+    // Close sidebar on mobile nav click
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+          document.querySelector('.sidebar').classList.remove('open');
+        }
+      });
+    });
+
+    // ============================================
+    // INITIALIZE
+    // ============================================
+    checkAuth();
+  </script>
+</body>
+</html>

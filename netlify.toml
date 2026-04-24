@@ -1,0 +1,17 @@
+[build]
+  command = ""
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# SPA redirect - all routes to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Serverless functions
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
