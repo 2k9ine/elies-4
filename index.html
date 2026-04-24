@@ -216,8 +216,15 @@
           <label for="login-password">Password</label>
           <input type="password" id="login-password" placeholder="Your password" required>
         </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+        <div class="form-group">
+          <label for="login-name" id="login-name-label" class="hidden">Full Name</label>
+          <input type="text" id="login-name" class="hidden" placeholder="Your full name">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;" id="auth-submit-btn">Sign In</button>
       </form>
+      <div style="text-align: center; margin-top: 16px;">
+        <a href="#" id="auth-toggle" style="color: var(--accent-blue-light); font-size: 14px; cursor: pointer;">Don't have an account? Sign up</a>
+      </div>
       <div id="auth-error" class="text-danger" style="margin-top: 16px; text-align: center; font-size: 14px;"></div>
     </div>
   </div>
@@ -678,21 +685,70 @@
     // ============================================
     // AUTH
     // ============================================
-    async function handleLogin(e) {
+    let isSignUpMode = false;
+
+    function toggleAuthMode() {
+      isSignUpMode = !isSignUpMode;
+      const nameLabel = document.getElementById('login-name-label');
+      const nameInput = document.getElementById('login-name');
+      const submitBtn = document.getElementById('auth-submit-btn');
+      const toggleLink = document.getElementById('auth-toggle');
+      const subtitle = document.querySelector('.auth-subtitle');
+
+      if (isSignUpMode) {
+        nameLabel.classList.remove('hidden');
+        nameInput.classList.remove('hidden');
+        submitBtn.textContent = 'Sign Up';
+        toggleLink.textContent = 'Already have an account? Sign in';
+        subtitle.textContent = 'Create your admin account';
+      } else {
+        nameLabel.classList.add('hidden');
+        nameInput.classList.add('hidden');
+        submitBtn.textContent = 'Sign In';
+        toggleLink.textContent = "Don't have an account? Sign up";
+        subtitle.textContent = 'Music School Management';
+      }
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    async function handleAuth(e) {
       e.preventDefault();
+      console.log('Auth handler called, isSignUpMode:', isSignUpMode);
       const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
+      const name = document.getElementById('login-name').value;
       const errorDiv = document.getElementById('auth-error');
       errorDiv.textContent = '';
 
       try {
         showLoading();
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        currentUser = data.user;
-        showApp();
+        if (isSignUpMode) {
+          // Sign up
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: name } },
+          });
+          console.log('Sign up result:', data, error);
+          if (error) throw error;
+          if (data.user) {
+            showToast('Account created! Please check your email to confirm.');
+            showApp();
+          } else {
+            showToast('Sign up successful! Please check your email to confirm.');
+          }
+        } else {
+          // Sign in
+          console.log('Attempting sign in with:', email);
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          console.log('Sign in result:', data, error);
+          if (error) throw error;
+          currentUser = data.user;
+          showApp();
+        }
       } catch (err) {
-        errorDiv.textContent = err.message || 'Login failed. Please check your credentials.';
+        console.error('Auth error:', err);
+        errorDiv.textContent = err.message || 'Authentication failed. Please try again.';
       } finally {
         hideLoading();
       }
@@ -1396,7 +1452,8 @@
     // ============================================
     // EVENT LISTENERS
     // ============================================
-    document.getElementById('login-form').addEventListener('submit', handleLogin);
+    document.getElementById('login-form').addEventListener('submit', handleAuth);
+    document.getElementById('auth-toggle').addEventListener('click', (e) => { e.preventDefault(); toggleAuthMode(); });
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
     document.querySelectorAll('.nav-item').forEach(item => {
